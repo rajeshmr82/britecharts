@@ -39,7 +39,7 @@ import { gridHorizontal, gridVertical } from '../helpers/grid';
  */
 
 /**
- * @typedef lineChartFlatData
+ * @typedef LineChartFlatData
  * @type {object}
  * @property {string} topicName    Topic name (required)
  * @property {number} topic        Topic identifier (required)
@@ -58,7 +58,7 @@ import { gridHorizontal, gridVertical } from '../helpers/grid';
 
 /**
  * Former data standard, it is currently calculated internally if not passed
- * @typedef lineChartDataByTopic
+ * @typedef LineChartDataByTopic
  * @type {object}
  * @property {string} topicName    Topic name (required)
  * @property {number} topic        Topic identifier (required)
@@ -83,7 +83,7 @@ import { gridHorizontal, gridVertical } from '../helpers/grid';
 
 /**
  * The Data Sorted is calculated internally in the chart in order to pass it to our tooltips
- * @typedef lineChartDataSorted
+ * @typedef LineChartDataSorted
  * @type {object[]}
  * @property {string} date | number        Date in ISO8601 format or number (required)]
  * @property {object[]} topics     List of topics with values that date (required)
@@ -116,11 +116,11 @@ import { gridHorizontal, gridVertical } from '../helpers/grid';
 
 /**
  * The data shape for the line chart.
- * Note that up to version 2.10.1, this required a "dataByTopic" array described on lineChartDataByTopic.
+ * Note that up to version 2.10.1, this required a "dataByTopic" array described on LineChartDataByTopic.
  * The "dataByTopic" schema still works, but we prefer a flat dataset as described here.
  * @typedef LineChartData
  * @type {object}
- * @property {lineChartFlatData[]} data  Data values to chart (required)
+ * @property {LineChartFlatData[]} data  Data values to chart (required)
  *
  * @example
  * {
@@ -600,7 +600,10 @@ export default function module() {
             buildContainerGroups();
         }
 
-        svg.attr('width', width).attr('height', height);
+        svg.attr('viewBox', [0, 0, width, height])
+            .attr('style', 'max-width: 100%; height: auto; height: intrinsic;')
+            .attr('width', width)
+            .attr('height', height);
     }
 
     /**
@@ -701,12 +704,14 @@ export default function module() {
      */
     function animateLine() {
         if (isAnimated) {
-            const totalLength = paths.node().getTotalLength();
+            const totalLength = paths.nodes().reduce(findLongestPath, 0);
+
             paths
                 .attr(
                     'stroke-dasharray',
                     totalLength + ' ' + strokeDasharrayOffset * totalLength
                 )
+                .style('will-change', 'stroke-dasharray')
                 .attr('stroke-dashoffset', totalLength)
                 .transition()
                 .duration(animationDuration)
@@ -1087,6 +1092,17 @@ export default function module() {
                 .attr('x2', 0)
                 .attr('y2', 0);
         }
+    }
+
+    /**
+     * Reduces a list of SVGPaths to their longest length
+     * @param {number} acc          Longest path until the moment
+     * @param {SVGElement} path     Path to examine
+     * @returns {number}            Longest between the accumulated length or the current path's length
+     * @private
+     */
+    function findLongestPath(acc, path) {
+        return acc > path.getTotalLength() ? acc : path.getTotalLength();
     }
 
     /**

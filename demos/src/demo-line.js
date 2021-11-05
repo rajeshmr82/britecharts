@@ -1,6 +1,6 @@
 import { select, selectAll } from 'd3-selection';
 import { timeFormat } from 'd3-time-format';
-import PubSub from 'pubsub-js';
+// import PubSub from 'pubsub-js';
 
 import brush from './../../src/charts/brush/brush';
 import line from './../../src/charts/line/line';
@@ -32,21 +32,22 @@ function createBrushChart(optionalColorSchema) {
             .height(100)
             .isAnimated(true)
             .margin(brushMargin)
-            .on('customBrushEnd', function (brushExtent) {
+            .on('customBrushEnd', function ([brushRangeStart, brushRangeEnd]) {
                 let format = timeFormat('%m/%d/%Y');
 
-                select('.js-start-date').text(format(brushExtent[0]));
-                select('.js-end-date').text(format(brushExtent[1]));
+                select('.js-start-date').text(format(brushRangeStart));
+                select('.js-end-date').text(format(brushRangeEnd));
                 select('.js-date-range').classed('is-hidden', false);
 
                 // Filter
                 selectAll('.js-line-chart-container .line-chart').remove();
 
-                if (brushExtent[0] && brushExtent[1]) {
-                    createLineChart(
-                        colorSchema,
-                        filterData(brushExtent[0], brushExtent[1])
+                if (brushRangeStart && brushRangeEnd) {
+                    const filteredDataByBrushRange = filterData(
+                        brushRangeStart,
+                        brushRangeEnd
                     );
+                    createLineChart(colorSchema, filteredDataByBrushRange);
                 } else {
                     createLineChart(colorSchema, dataset);
                 }
@@ -222,7 +223,7 @@ function createLoadingState(isLoading, instance) {
         containerWidth = container.node()
             ? container.node().getBoundingClientRect().width
             : false;
-    const dataset = aTestDataSet().withOneSource().build();
+    const dataset = isLoading ? {} : aTestDataSet().withOneSource().build();
 
     if (containerWidth) {
         lineChart
@@ -265,12 +266,7 @@ function filterData(d0, d1) {
     let data = JSON.parse(JSON.stringify(aTestDataSet().with5Topics().build()));
 
     data.dataByDate = data.dataByDate.filter(isInRange.bind(null, d0, d1));
-
-    data.dataByTopic = data.dataByTopic.map((topic) => {
-        topic.dates = topic.dates.filter(isInRange.bind(null, d0, d1));
-
-        return topic;
-    });
+    data.data = data.data.filter(isInRange.bind(null, d0, d1));
 
     return data;
 }
@@ -297,7 +293,7 @@ if (select('.js-line-chart-container').node()) {
     };
 
     // Redraw charts on window resize
-    PubSub.subscribe('resize', redrawCharts);
+    // PubSub.subscribe('resize', redrawCharts);
 
     // Color schema selector
     colorSelectorHelper.createColorSelector(
